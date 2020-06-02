@@ -357,7 +357,7 @@ function generateTaskInfo (iTask) {
   });
 }
 
-function getSubTaskTotalEstimation1(iTaskName) {
+/*function getSubTaskTotalEstimation1(iTaskName) {
   return new Promise((resolve, reject) => {
     console.log(iTaskName)
     Task.findAll({
@@ -392,7 +392,7 @@ function getSubTaskTotalEstimation1(iTaskName) {
       }
     });
   })
-}
+}*/
 
 function getSubTaskTotalEstimation(iTaskName) {
   return new Promise((resolve, reject) => {
@@ -559,6 +559,9 @@ async function saveTask(req, res) {
     DeliverableTag: reqTask.task_deliverableTag != ''? reqTask.task_deliverableTag: null,
     Detail: reqTask.task_detail != ''? reqTask.task_detail: null,
   }
+  console.log('TaskObject Start: ------------->');
+  console.log(taskObj);
+  console.log('TaskObject End: ------------->');
   Task.findOrCreate({
       where: { TaskName: reqTaskName }, 
       defaults: taskObj
@@ -572,7 +575,7 @@ async function saveTask(req, res) {
         taskObj.Effort = task.Effort;
         // Change parent task
         if (Number(reqTask.task_level) == 3 || Number(reqTask.task_level) == 4) {
-          if (!reqTaskName.startsWith(reqTaskParent)) {
+          if (!reqTaskName.startsWith(reqTaskParent) && checkIfChangeParent(reqTaskName)) {
             console.log('Task name not starts with parent task name, will change parent task')
             //Change parent task effort
             var oldParent = task.ParentTaskName;
@@ -599,6 +602,18 @@ async function saveTask(req, res) {
         return res.json(responseMessage(1, task, 'Task existed'));
       }
   });
+}
+
+function checkIfChangeParent(iTaskName) {
+  if(iTaskName != null && iTaskName != ''){
+    if(!iTaskName.startsWith('INC') && !iTaskName.startsWith('INCTASK') && !iTaskName.startsWith('PRB')) {
+      return true;
+    } else {
+      return false;
+    }
+  } else {
+    return false;
+  }
 }
 
 function updateParentTaskEffort (iTaskName, iEffort) {
@@ -1011,6 +1026,153 @@ function getSubTaskExist (iParentTaskName) {
   });
 }
 
+//get TaskGroup 
+function getTaskGroupById(iTaskGroupId) {
+  return new Promise((resolve, reject) => {
+    TaskGroup.findOne({
+      where: {
+        Id: iTaskGroupId
+      }
+    }).then(function(taskGroup) {
+      if(taskGroup != null) {
+        resolve(taskGroup)
+      } else {
+        resolve(null);
+      }
+    });
+  });
+}
+
+//get Assign to me task Level3
+router.post('/getAssignToTaskLevel3', function(req, res, next) {
+  console.log('getAssignToTaskLevel3')
+  Task.findAll({
+    include: [{model: TaskType, attributes: ['Id', 'Name']}],
+    where: {
+      AssigneeId: req.body.AssignId,
+      TaskLevel: 3
+    },
+    order: [
+      ['createdAt', 'DESC']
+    ]
+  }).then(async function(tasks){
+    var rtnResult = []
+    if(tasks != null && tasks.length > 0){
+      for(var i = 0 ; i < tasks.length ; i++){
+        var resJson = {}
+        resJson.task_id = tasks[i].Id
+        resJson.task_name = tasks[i].TaskName
+        resJson.task_level = tasks[i].TaskLevel
+        resJson.task_parent_name = tasks[i].ParentTaskName
+        resJson.task_desc = tasks[i].Description
+        resJson.task_status = tasks[i].Status
+        resJson.task_effort = tasks[i].Effort
+        resJson.task_estimation = tasks[i].Estimation
+        resJson.task_assignee = tasks[i].AssigneeId
+        resJson.task_taskGroup = await getTaskGroupById(tasks[i].TaskGroupId)
+        rtnResult.push(resJson)
+      }
+      return res.json(responseMessage(0,rtnResult,''));
+    }else{
+      return res.json(responseMessage(1, null, 'No task exist'));
+    }
+  })
+});
+
+//get Assign to me task Level4
+router.post('/getAssignToTaskLevel4ForLevl3', function(req, res, next) {
+  console.log('getAssignToTaskLevel4')
+  Task.findAll({
+    include: [{model: TaskType, attributes: ['Id', 'Name']}],
+    where: {
+      AssigneeId: req.body.AssignId,
+      TaskLevel: 4,
+      ParentTaskName:req.body.ParentTaskName
+    },
+    order: [
+      ['createdAt', 'DESC']
+    ]
+  }).then(async function(tasks){
+    var rtnResult = []
+    if(tasks != null && tasks.length > 0){
+      for(var i = 0 ; i < tasks.length ; i++){
+        var resJson = {}
+        resJson.task_id = tasks[i].Id
+        resJson.task_level = tasks[i].TaskLevel
+        resJson.task_name = tasks[i].TaskName
+        resJson.task_parent_name = tasks[i].ParentTaskName
+        resJson.task_desc = tasks[i].Description
+        resJson.task_status = tasks[i].Status
+        resJson.task_effort = tasks[i].Effort
+        resJson.task_estimation = tasks[i].Estimation
+        resJson.task_assignee = tasks[i].AssigneeId
+        resJson.task_taskGroup = await getTaskGroupById(tasks[i].TaskGroupId)
+        rtnResult.push(resJson)
+      }
+      return res.json(responseMessage(0,rtnResult,''));
+    }else{
+      return res.json(responseMessage(1, null, 'No task exist'));
+    }
+  })
+});
+
+//get Assign to me task Level4 except parent
+router.get('/getAssignToTaskLevel4NotLevel3', function(req, res, next) {
+  console.log('getAssignToTaskLevel4NotLevel3')
+  var parenttaskname = req.query.ParentTaskName
+  console.log(parenttaskname)
+  Task.findAll({
+    include: [{model: TaskType, attributes: ['Id', 'Name']}],
+    where: {
+      AssigneeId: req.query.AssignId,
+      TaskLevel: 4,
+      ParentTaskName: { [Op.notIn]:parenttaskname }
+    },
+    order: [
+      ['createdAt', 'DESC']
+    ]
+  }).then(async function(tasks){
+    var rtnResult = []
+    console.log(tasks)
+    if(tasks != null && tasks.length > 0){
+      for(var i = 0 ; i < tasks.length ; i++){
+        var resJson = {}
+        resJson.task_id = tasks[i].Id
+        resJson.task_name = tasks[i].TaskName
+        resJson.task_level = tasks[i].TaskLevel
+        resJson.task_parent_name = tasks[i].ParentTaskName
+        resJson.task_desc = tasks[i].Description
+        resJson.task_status = tasks[i].Status
+        resJson.task_effort = tasks[i].Effort
+        resJson.task_estimation = tasks[i].Estimation
+        resJson.task_assignee = tasks[i].AssigneeId
+        resJson.task_taskGroup = await getTaskGroupById(tasks[i].TaskGroupId)
+        rtnResult.push(resJson)
+      }
+      return res.json(responseMessage(0,rtnResult,''));
+    }else{
+      return res.json(responseMessage(1, null, 'No task exist'));
+    }
+  })
+});
+
+//get task group
+router.post('/getTaskGroup', function(req, res, next) {
+  console.log("getTaskGroup")
+  TaskGroup.findAll({
+    order: [
+      ['createdAt', 'DESC']
+    ]
+  }).then(function(taskgroups) {
+    console.log(taskgroups)
+    if(taskgroups != null && taskgroups.length > 0) {
+      return res.json(responseMessage(0, taskgroups, ''));  
+    } else {
+      return res.json(responseMessage(1, null, 'No task exist'));
+    }
+  })
+});
+
 // Plan Task API
 router.post('/getLevel2TaskByParentTask', function(req, res, next) {
   console.log('Start to get level 2 task by parent task name: ' + req.body.reqParentTaskName)
@@ -1101,7 +1263,7 @@ router.post('/refreshLevel2TaskSubEstimation', function(req, res, next) {
   })
 });
 
-function getSubTaskTotalEstimationForPlanTask(iTaskName, iTaskGroupId, iTaskGroupFlag) {
+/*function getSubTaskTotalEstimationForPlanTask1(iTaskName, iTaskGroupId, iTaskGroupFlag) {
   return new Promise((resolve, reject) => {
     var criteria = {}
     if (iTaskGroupId > 0 ) {
@@ -1164,6 +1326,43 @@ function getSubTaskTotalEstimationForPlanTask(iTaskName, iTaskGroupId, iTaskGrou
       } else {
         resolve(0);
       }
+    });
+  })
+} */
+
+function getSubTaskTotalEstimationForPlanTask(iTaskName, iTaskGroupId, iTaskGroupFlag) {
+  return new Promise((resolve, reject) => {
+    var criteria = '';
+    if (iTaskGroupId > 0 ) {
+      if (iTaskGroupFlag == 0) {
+        criteria = ' where raw_data.TaskGroupId = ' + iTaskGroupId
+      }
+      if (iTaskGroupFlag == 1) {
+        criteria = ' where (raw_data.TaskGroupId = ' + iTaskGroupId + ' or raw_data.TaskGroupId is null)'
+      }
+    } 
+    else if (iTaskGroupId == -1 ) {
+      criteria = ' where raw_data.TaskGroupId is null'
+    } 
+    else {
+      criteria = ''
+    }
+    var sql = 'select * from (select id, ParentTaskName, TaskName, Estimation, TaskLevel, TaskGroupId from (select * from tasks order by ParentTaskName, id) data_sorted, (select @pv := "' + iTaskName + '") initialisation where   find_in_set(ParentTaskName, @pv) and length(@pv := concat(@pv, ",", TaskName))) raw_data'
+    sql = sql + criteria
+    db.query(sql).then(totalTask => {
+      var tasks = totalTask[0];
+      var rtnTotalEstimation = 0;
+      if (tasks != null && tasks.length > 0) {
+        for (var i=0; i<tasks.length; i++) {
+          var taskName = tasks[i].TaskName;
+          if (getIndexOfValueInArr(tasks, 'ParentTaskName', taskName) == -1){
+            rtnTotalEstimation = rtnTotalEstimation + Number(tasks[i].Estimation);
+          } else {
+            continue;
+          }
+        }
+      }
+      resolve(rtnTotalEstimation);
     });
   })
 }
@@ -1657,12 +1856,32 @@ function getNameByUserId(iUserId){
 //2020/3/23 extractReport3ForWeb
 router.post('/extractReport3ForWeb',function(req,res,next){
   console.log("extractReport3ForWeb")
+  var reqReportStartMonth = req.body.wReportStartMonth;
+  var reqReportStartDatetime = reqReportStartMonth + '-01 00:00:00'
+  var reqReportEndMonth = req.body.wReportEndMonth;
+  var reqReportEndDatetime = reqReportEndMonth + '-31 23:59:59'
   var rtnResult = [];
   Task.findAll({
-      where:{
-        Id: { [Op.ne]: null }
+    include: [{
+      model: TaskType, 
+      attributes: ['Name'],
+      where: {
+        Name: { [Op.ne]: 'Pool' }
       }
+    }],
+    where:{
+      Id: { [Op.ne]: null },
+      [Op.or] : [
+        {[Op.and]: [
+          { Creator:   { [Op.notLike]: 'PMT:%' }},
+          { IssueDate: { [Op.gte]:  reqReportStartDatetime }},
+          { IssueDate: { [Op.lte]:  reqReportEndDatetime }}
+        ]},
+        { Creator:   { [Op.like]: 'PMT:%' } }
+      ]
+    }
   }).then(async function(task){
+    var userList = await getUserList()
     if(task != null && task.length>0){
       for(var i = 0 ;i<task.length;i++){
         var resJson = {};
@@ -1674,20 +1893,36 @@ router.post('/extractReport3ForWeb',function(req,res,next){
         resJson.report_status = task[i].Status
         resJson.report_des = task[i].Description
         resJson.report_refpool = task[i].Reference
-        if(task[i].RespLeaderId!=null){
-          resJson.report_resp = await getNameByUserId(task[i].RespLeaderId) 
-          resJson.report_resplevel = await getLevelByUserId(task[i].RespLeaderId)
+        if(task[i].RespLeaderId != null ){
+          if(userList != null){
+            var userIndex = getIndexOfValueInArr(userList, 'Id', task[i].RespLeaderId)
+            resJson.report_resp = userIndex != -1? userList[userIndex].Name: ''
+            resJson.report_resplevel = userIndex != -1? userList[userIndex].Level: ''
+          }
         }else{
-          resJson.report_resp = task[i].RespLeaderId
+          resJson.report_resp = ''
+          resJson.report_resplevel = ''
         }
-        if(task[i].AssigneeId!=null){
-          resJson.report_assignee = await getNameByUserId(task[i].AssigneeId)
-          resJson.report_assigneelevel = await getLevelByUserId(task[i].AssigneeId)
+        if(task[i].AssigneeId != null ){
+          if(userList != null){
+            var userIndex = getIndexOfValueInArr(userList, 'Id', task[i].AssigneeId)
+            resJson.report_assignee = userIndex != -1? userList[userIndex].Name: ''
+            resJson.report_assigneelevel = userIndex != -1? userList[userIndex].Level: ''
+          }
         }else{
-          resJson.report_assignee = task[i].AssigneeId
+          resJson.report_assignee = ''
+          resJson.report_assigneelevel = ''
         }
         resJson.report_issue = task[i].IssueDate
         resJson.report_oppn = task[i].TopOppName
+        if(resJson.report_tasklevel == '1' || resJson.report_tasklevel == '2') {
+          resJson.report_estimation = ''
+          resJson.report_effort = ''
+        } else {
+          resJson.report_estimation = task[i].Estimation
+          resJson.report_effort = task[i].Effort
+        }
+        resJson.report_subtasks_estimation = ''
         rtnResult.push(resJson)
       }
       rtnResult = sortArray(rtnResult, 'report_Id')
@@ -1697,6 +1932,23 @@ router.post('/extractReport3ForWeb',function(req,res,next){
     }
   })
 })
+
+function getUserList() {
+  return new Promise((resolve,reject) =>{
+    User.findAll({
+      attributes: ['Id', 'Name', 'Level'],
+      where: {
+        IsActive: 1
+      }
+    }).then(async function(users){
+      if (users != null && users.length > 0) {
+        resolve(users);
+      } else {
+        resolve(null);
+      }
+    });
+  });
+} 
 
 function responseMessage(iStatusCode, iDataArray, iErrorMessage) {
   var resJson = {}; 

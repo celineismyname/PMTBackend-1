@@ -106,6 +106,7 @@ router.post('/loginAdmin', function(req, res, next) {
 
 //Add or update User
 router.post('/addOrUpdateUser', function(req, res, next) {
+  console.log("addOrUpdateUser")
   var reqUserIsActive = true;
   var reqData = {}
   if( req.body.taskTypeId != "0"){
@@ -139,8 +140,9 @@ router.post('/addOrUpdateUser', function(req, res, next) {
         return res.json(responseMessage(0, user, 'Create user successfully!'));
       } 
       else if(user != null && !created) {
+        console.log(user)
         user.update({
-          Name: req.body.reqUserEid,
+          Name: req.body.reqUserserEid,
           Email: req.body.userEmail,
           TeamId: teamId,
           Role: req.body.reqUserRole,
@@ -180,7 +182,7 @@ router.get('/getUserList', function(req, res, next) {
   var criteria = {}
   if (reqIsActive === 1) {
     criteria = {
-      IsActive: 1,
+      IsActive: 0,
       Role: {[Op.ne]: 'Special'}
     }
   }
@@ -197,6 +199,7 @@ router.get('/getUserList', function(req, res, next) {
   })
   .then(function(user) {
     if(user != null && user.length > 0){
+      console.log(user[0])
       for(var i=0;i<user.length;i++){
         var resJson = {};
         resJson.user_id = user[i].Id;
