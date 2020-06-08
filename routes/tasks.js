@@ -1026,6 +1026,56 @@ function getSubTaskExist (iParentTaskName) {
   });
 }
 
+//get TaskGroupId by Name
+router.post('/getTaskGroupIdByName', function(req, res, next) {
+  console.log('getTaskGroupIdByName')
+  TaskGroup.findOne({
+    where: {
+      Name:req.body.reqTaskGroupName
+    }
+  }).then(async function(taskgroups){
+    if(taskgroups != null){
+      var resJson = {}
+      resJson.taskgroup_id = taskgroups.Id
+      resJson.taskgroup_name = taskgroups.Name
+      return res.json(responseMessage(0,resJson,''));
+    }else{
+      return res.json(responseMessage(1, null, 'No taskgroups exist'));
+  }})
+});
+
+
+//get TaskList By Status
+router.post('/getTaskListByStatus', function(req, res, next) {
+  console.log('getTaskListByStatus')
+  Task.findAll({
+    where: {
+      Status:req.body.reqStatus,
+      AssigneeId: req.body.AssignId
+    }
+  }).then(async function(tasks){
+    var rtnResult = []
+    if(tasks != null && tasks.length > 0){
+      for(var i = 0 ; i < tasks.length ; i++){
+        var resJson = {}
+        resJson.task_id = tasks[i].Id
+        resJson.task_name = tasks[i].TaskName
+        resJson.task_level = tasks[i].TaskLevel
+        resJson.task_parent_name = tasks[i].ParentTaskName
+        resJson.task_desc = tasks[i].Description
+        resJson.task_status = tasks[i].Status
+        resJson.task_effort = tasks[i].Effort
+        resJson.task_estimation = tasks[i].Estimation
+        resJson.task_assignee = tasks[i].AssigneeId
+        resJson.task_taskGroup = await getTaskGroupById(tasks[i].TaskGroupId)
+        rtnResult.push(resJson)
+      }
+      return res.json(responseMessage(0,rtnResult,''));
+    }else{
+      return res.json(responseMessage(1, null, 'No taskgroups exist'));
+  }})
+});
+
 //get TaskGroup 
 function getTaskGroupById(iTaskGroupId) {
   return new Promise((resolve, reject) => {
@@ -1120,7 +1170,6 @@ router.post('/getAssignToTaskLevel4ForLevl3', function(req, res, next) {
 router.get('/getAssignToTaskLevel4NotLevel3', function(req, res, next) {
   console.log('getAssignToTaskLevel4NotLevel3')
   var parenttaskname = req.query.ParentTaskName
-  console.log(parenttaskname)
   Task.findAll({
     include: [{model: TaskType, attributes: ['Id', 'Name']}],
     where: {
@@ -1133,7 +1182,6 @@ router.get('/getAssignToTaskLevel4NotLevel3', function(req, res, next) {
     ]
   }).then(async function(tasks){
     var rtnResult = []
-    console.log(tasks)
     if(tasks != null && tasks.length > 0){
       for(var i = 0 ; i < tasks.length ; i++){
         var resJson = {}
@@ -1156,6 +1204,8 @@ router.get('/getAssignToTaskLevel4NotLevel3', function(req, res, next) {
   })
 });
 
+
+
 //get task group
 router.post('/getTaskGroup', function(req, res, next) {
   console.log("getTaskGroup")
@@ -1164,7 +1214,6 @@ router.post('/getTaskGroup', function(req, res, next) {
       ['createdAt', 'DESC']
     ]
   }).then(function(taskgroups) {
-    console.log(taskgroups)
     if(taskgroups != null && taskgroups.length > 0) {
       return res.json(responseMessage(0, taskgroups, ''));  
     } else {
