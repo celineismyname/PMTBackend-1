@@ -1094,17 +1094,21 @@ function getTaskGroupById(iTaskGroupId) {
 }
 
 //get Assign to me task Level3
-router.post('/getAssignToTaskLevel3', function(req, res, next) {
+router.get('/getAssignToTaskLevel3', function(req, res, next) {
   console.log('getAssignToTaskLevel3')
+  var reqPage = Number(req.query.reqPage);
+  var reqSize = Number(req.query.reqSize);
   Task.findAll({
     include: [{model: TaskType, attributes: ['Id', 'Name']}],
     where: {
-      AssigneeId: req.body.AssignId,
+      AssigneeId: req.query.AssignId,
       TaskLevel: 3
     },
     order: [
       ['createdAt', 'DESC']
-    ]
+    ],
+    limit: reqSize,
+    offset: reqSize * (reqPage - 1),
   }).then(async function(tasks){
     var rtnResult = []
     if(tasks != null && tasks.length > 0){
@@ -1130,18 +1134,22 @@ router.post('/getAssignToTaskLevel3', function(req, res, next) {
 });
 
 //get Assign to me task Level4
-router.post('/getAssignToTaskLevel4ForLevl3', function(req, res, next) {
+router.get('/getAssignToTaskLevel4ForLevl3', function(req, res, next) {
   console.log('getAssignToTaskLevel4')
+  var reqPage = Number(req.query.reqPage);
+  var reqSize = Number(req.query.reqSize);
   Task.findAll({
     include: [{model: TaskType, attributes: ['Id', 'Name']}],
     where: {
-      AssigneeId: req.body.AssignId,
+      AssigneeId: req.query.AssignId,
       TaskLevel: 4,
-      ParentTaskName:req.body.ParentTaskName
+      ParentTaskName:req.query.ParentTaskName
     },
     order: [
       ['createdAt', 'DESC']
-    ]
+    ],
+    limit: reqSize,
+    offset: reqSize * (reqPage - 1),
   }).then(async function(tasks){
     var rtnResult = []
     if(tasks != null && tasks.length > 0){
@@ -1169,6 +1177,8 @@ router.post('/getAssignToTaskLevel4ForLevl3', function(req, res, next) {
 //get Assign to me task Level4 except parent
 router.get('/getAssignToTaskLevel4NotLevel3', function(req, res, next) {
   console.log('getAssignToTaskLevel4NotLevel3')
+  var reqPage = Number(req.query.reqPage);
+  var reqSize = Number(req.query.reqSize);
   var parenttaskname = req.query.ParentTaskName
   Task.findAll({
     include: [{model: TaskType, attributes: ['Id', 'Name']}],
@@ -1179,7 +1189,9 @@ router.get('/getAssignToTaskLevel4NotLevel3', function(req, res, next) {
     },
     order: [
       ['createdAt', 'DESC']
-    ]
+    ],
+    limit: reqSize,
+    offset: reqSize * (reqPage - 1),
   }).then(async function(tasks){
     var rtnResult = []
     if(tasks != null && tasks.length > 0){
