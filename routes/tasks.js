@@ -1093,6 +1093,27 @@ function getTaskGroupById(iTaskGroupId) {
   });
 }
 
+function generateAssignTaskList(iTaskObjArray){
+  return new Promise(async (resolve,reject) => {
+    var rtnResult = [];
+    for(var i = 0 ; i < iTaskObjArray.length ; i++){
+      var resJson = {}
+      resJson.task_id = iTaskObjArray[i].Id
+      resJson.task_name = iTaskObjArray[i].TaskName
+      resJson.task_level = iTaskObjArray[i].TaskLevel
+      resJson.task_parent_name = iTaskObjArray[i].ParentTaskName
+      resJson.task_desc = iTaskObjArray[i].Description
+      resJson.task_status = iTaskObjArray[i].Status
+      resJson.task_effort = iTaskObjArray[i].Effort
+      resJson.task_estimation = iTaskObjArray[i].Estimation
+      resJson.task_assignee = iTaskObjArray[i].AssigneeId
+      resJson.task_taskGroup = await getTaskGroupById(iTaskObjArray[i].TaskGroupId)
+      rtnResult.push(resJson)
+    }   
+    resolve(rtnResult) 
+  })
+}
+
 //get Assign to me task Level3
 router.get('/getAssignToTaskLevel3', function(req, res, next) {
   console.log('getAssignToTaskLevel3')
@@ -1110,23 +1131,9 @@ router.get('/getAssignToTaskLevel3', function(req, res, next) {
     limit: reqSize,
     offset: reqSize * (reqPage - 1),
   }).then(async function(tasks){
-    var rtnResult = []
-    if(tasks != null && tasks.length > 0){
-      for(var i = 0 ; i < tasks.length ; i++){
-        var resJson = {}
-        resJson.task_id = tasks[i].Id
-        resJson.task_name = tasks[i].TaskName
-        resJson.task_level = tasks[i].TaskLevel
-        resJson.task_parent_name = tasks[i].ParentTaskName
-        resJson.task_desc = tasks[i].Description
-        resJson.task_status = tasks[i].Status
-        resJson.task_effort = tasks[i].Effort
-        resJson.task_estimation = tasks[i].Estimation
-        resJson.task_assignee = tasks[i].AssigneeId
-        resJson.task_taskGroup = await getTaskGroupById(tasks[i].TaskGroupId)
-        rtnResult.push(resJson)
-      }
-      return res.json(responseMessage(0,rtnResult,''));
+    if(tasks!=null){
+      var response = await generateAssignTaskList(tasks);
+      return res.json(responseMessage(0, response, ''));     
     }else{
       return res.json(responseMessage(1, null, 'No task exist'));
     }
@@ -1151,23 +1158,9 @@ router.get('/getAssignToTaskLevel4ForLevl3', function(req, res, next) {
     limit: reqSize,
     offset: reqSize * (reqPage - 1),
   }).then(async function(tasks){
-    var rtnResult = []
-    if(tasks != null && tasks.length > 0){
-      for(var i = 0 ; i < tasks.length ; i++){
-        var resJson = {}
-        resJson.task_id = tasks[i].Id
-        resJson.task_level = tasks[i].TaskLevel
-        resJson.task_name = tasks[i].TaskName
-        resJson.task_parent_name = tasks[i].ParentTaskName
-        resJson.task_desc = tasks[i].Description
-        resJson.task_status = tasks[i].Status
-        resJson.task_effort = tasks[i].Effort
-        resJson.task_estimation = tasks[i].Estimation
-        resJson.task_assignee = tasks[i].AssigneeId
-        resJson.task_taskGroup = await getTaskGroupById(tasks[i].TaskGroupId)
-        rtnResult.push(resJson)
-      }
-      return res.json(responseMessage(0,rtnResult,''));
+    if(tasks!=null){
+      var response = await generateAssignTaskList(tasks);
+      return res.json(responseMessage(0, response, ''));     
     }else{
       return res.json(responseMessage(1, null, 'No task exist'));
     }
@@ -1193,23 +1186,9 @@ router.get('/getAssignToTaskLevel4NotLevel3', function(req, res, next) {
     limit: reqSize,
     offset: reqSize * (reqPage - 1),
   }).then(async function(tasks){
-    var rtnResult = []
-    if(tasks != null && tasks.length > 0){
-      for(var i = 0 ; i < tasks.length ; i++){
-        var resJson = {}
-        resJson.task_id = tasks[i].Id
-        resJson.task_name = tasks[i].TaskName
-        resJson.task_level = tasks[i].TaskLevel
-        resJson.task_parent_name = tasks[i].ParentTaskName
-        resJson.task_desc = tasks[i].Description
-        resJson.task_status = tasks[i].Status
-        resJson.task_effort = tasks[i].Effort
-        resJson.task_estimation = tasks[i].Estimation
-        resJson.task_assignee = tasks[i].AssigneeId
-        resJson.task_taskGroup = await getTaskGroupById(tasks[i].TaskGroupId)
-        rtnResult.push(resJson)
-      }
-      return res.json(responseMessage(0,rtnResult,''));
+    if(tasks!=null){
+      var response = await generateAssignTaskList(tasks);
+      return res.json(responseMessage(0, response, ''));     
     }else{
       return res.json(responseMessage(1, null, 'No task exist'));
     }
