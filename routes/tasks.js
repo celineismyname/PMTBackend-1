@@ -1114,11 +1114,60 @@ function generateAssignTaskList(iTaskObjArray){
   })
 }
 
+function generateWarningTaskList(iTaskObjArray){
+  return new Promise(async (resolve,reject) => {
+    var rtnResult = [];
+    for(var i = 0 ; i < iTaskObjArray.length ; i++){
+      var resJson = {}
+      resJson.task_id = iTaskObjArray[i].Id
+      resJson.task_name = iTaskObjArray[i].TaskName
+      resJson.task_level = iTaskObjArray[i].TaskLevel
+      resJson.task_parent_name = iTaskObjArray[i].ParentTaskName
+      resJson.task_desc = iTaskObjArray[i].Description
+      resJson.task_status = iTaskObjArray[i].Status
+      resJson.task_effort = iTaskObjArray[i].Effort
+      resJson.task_estimation = iTaskObjArray[i].Estimation
+      resJson.task_assignee = iTaskObjArray[i].AssigneeId
+      resJson.task_taskGroup = await getTaskGroupById(iTaskObjArray[i].TaskGroupId)
+      if(resJson.task_taskGroup != null){
+        var today = new Date()
+        resJson.task_taskGroup.EndTime.replace(/-/g,"/")
+        var endDate = new Date(resJson.task_taskGroup.EndTime)
+        var days = parseInt(Math.ceil((endDate-today)/(1000*3600*24)))
+        if(days<5){
+          resJson.task_degree = Math.round(resJson.task_effort / parseFloat(resJson.task_estimation) * 10000) / 100.00 + "%"
+          rtnResult.push(resJson)          
+        }        
+      }      
+    }
+    resolve(rtnResult) 
+  })
+}
+
+//get Task Warning
+router.get('/getTaskWarning', function(req, res, next) {
+  console.log('getTaskWarning')
+  Task.findAll({
+    include: [{model: TaskType, attributes: ['Id', 'Name']}],
+    where: {
+      AssigneeId: req.query.AssignId,
+    },
+    order: [
+      ['createdAt', 'DESC']
+     ]
+  }).then(async function(tasks){
+    if(tasks!=null){
+      var response = await generateWarningTaskList(tasks);
+      return res.json(responseMessage(0, response, ''));     
+    }else{
+      return res.json(responseMessage(1, null, 'No task exist'));
+    }
+  })
+});
+
 //get Assign to me task Level3
 router.get('/getAssignToTaskLevel3', function(req, res, next) {
   console.log('getAssignToTaskLevel3')
-  var reqPage = Number(req.query.reqPage);
-  var reqSize = Number(req.query.reqSize);
   Task.findAll({
     include: [{model: TaskType, attributes: ['Id', 'Name']}],
     where: {
@@ -1127,9 +1176,7 @@ router.get('/getAssignToTaskLevel3', function(req, res, next) {
     },
     order: [
       ['createdAt', 'DESC']
-    ],
-    limit: reqSize,
-    offset: reqSize * (reqPage - 1),
+     ]
   }).then(async function(tasks){
     if(tasks!=null){
       var response = await generateAssignTaskList(tasks);
@@ -1143,8 +1190,6 @@ router.get('/getAssignToTaskLevel3', function(req, res, next) {
 //get Assign to me task Level4
 router.get('/getAssignToTaskLevel4ForLevl3', function(req, res, next) {
   console.log('getAssignToTaskLevel4')
-  var reqPage = Number(req.query.reqPage);
-  var reqSize = Number(req.query.reqSize);
   Task.findAll({
     include: [{model: TaskType, attributes: ['Id', 'Name']}],
     where: {
@@ -1154,9 +1199,7 @@ router.get('/getAssignToTaskLevel4ForLevl3', function(req, res, next) {
     },
     order: [
       ['createdAt', 'DESC']
-    ],
-    limit: reqSize,
-    offset: reqSize * (reqPage - 1),
+     ]
   }).then(async function(tasks){
     if(tasks!=null){
       var response = await generateAssignTaskList(tasks);
@@ -1170,8 +1213,6 @@ router.get('/getAssignToTaskLevel4ForLevl3', function(req, res, next) {
 //get Assign to me task Level4 except parent
 router.get('/getAssignToTaskLevel4NotLevel3', function(req, res, next) {
   console.log('getAssignToTaskLevel4NotLevel3')
-  var reqPage = Number(req.query.reqPage);
-  var reqSize = Number(req.query.reqSize);
   var parenttaskname = req.query.ParentTaskName
   Task.findAll({
     include: [{model: TaskType, attributes: ['Id', 'Name']}],
@@ -1182,9 +1223,7 @@ router.get('/getAssignToTaskLevel4NotLevel3', function(req, res, next) {
     },
     order: [
       ['createdAt', 'DESC']
-    ],
-    limit: reqSize,
-    offset: reqSize * (reqPage - 1),
+    ]
   }).then(async function(tasks){
     if(tasks!=null){
       var response = await generateAssignTaskList(tasks);
