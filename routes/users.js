@@ -133,7 +133,9 @@ router.post('/addOrUpdateUser', function(req, res, next) {
         Level: req.body.reqUserLevel,
         EmployeeNumber: req.body.reqUserEmployeeNumber,
         Assignment: req.body.reqUserAssignment,
-        Nickname : req.body.reqUserNickname
+        Nickname : req.body.reqUserNickname,
+        EmailGroups : req.body.reqUserEmailGroups,
+        SkillType : req.body.reqUserSkillType
       }})
     .spread(function(user, created) {
       if(created) {
@@ -151,7 +153,9 @@ router.post('/addOrUpdateUser', function(req, res, next) {
           Level: req.body.reqUserLevel,
           EmployeeNumber: req.body.reqUserEmployeeNumber,
           Assignment: req.body.reqUserAssignment,
-          Nickname : req.body.reqUserNickname
+          Nickname : req.body.reqUserNickname,
+          EmailGroups : req.body.reqUserEmailGroups,
+          SkillType : req.body.reqUserSkillType
         });
         return res.json(responseMessage(0, user, 'Update user successfully!'));
       }
@@ -176,6 +180,33 @@ router.post('/inactiveUser', function(req, res, next) {
     }
   })
 });
+
+router.get('/getEmailGroupsAndSkillType',function(req,res,next) {
+  User.findOne({
+    where: {
+      Name : req.query.userEid
+    },
+    include: [{
+      model: Team,
+      attributes: ['Name']
+    }]
+  }).then(function(user){
+    if(user!=null){
+      var resJson = {}
+      resJson.user_team = user.team.Name
+      if(user.EmailGroups!=null){
+        resJson.user_email_groups = user.EmailGroups.split(',')
+      }
+      if(user.SkillType!=null){
+        resJson.user_skill_type = user.SkillType.split(',')
+      }
+      console.log(resJson)
+      return res.json(responseMessage(0, resJson, ''));
+    }else{
+      return res.json(responseMessage(1, null, 'No User exist'));      
+    }
+  })
+})
 
 router.get('/getUserList', function(req, res, next) {
   var reqIsActive = Number(req.query.IsActive)
@@ -213,6 +244,12 @@ router.get('/getUserList', function(req, res, next) {
         resJson.user_level = user[i].Level;
         resJson.user_employee_number = user[i].EmployeeNumber;
         resJson.user_assignment = user[i].Assignment;
+        if(user[i].EmailGroups!=null){
+          resJson.user_email_groups = user[i].EmailGroups.split(',')
+        }
+        if(user[i].SkillType!=null){
+          resJson.user_skill_type = user[i].SkillType.split(',')
+        }
         rtnResult.push(resJson);
       }
       return res.json(responseMessage(0, rtnResult, ''));
@@ -285,7 +322,7 @@ router.post('/getUserById', function(req, res, next) {
         var resJson = {};
         resJson.user_id = user.Id;
         resJson.user_eid = user.Name;
-        resJson.user_nickname = user[i].Nickname
+        resJson.user_nickname = user.Nickname
         resJson.user_email = user.Email;
         resJson.user_team = user.team.Name;
         resJson.user_teamproject = user.team.Project;
@@ -294,7 +331,7 @@ router.post('/getUserById', function(req, res, next) {
         resJson.user_namemapping = user.NameMapping;
         resJson.user_level = user.Level;
         resJson.user_employee_number = user.EmployeeNumber;
-        resJson.user_assignment = user[i].Assignment;
+        resJson.user_assignment = user.Assignment;
         if(team != null){
           var teamArray = [];
           for(var i=0; i< team.length; i++){
